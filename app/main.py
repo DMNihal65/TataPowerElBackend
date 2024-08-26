@@ -24,4 +24,4 @@ app.include_router(image_retrieval.router, prefix="/ELimage", tags=["image_retri
 # app.include_router(auth.router, tags=["auth"])
 
 # To Run
-# uvicorn app.main:app --reload --host 172.18.101.47 --port 2929
+# uvicorn app.main:app --reload --host 172.18.101.47 --port 2525

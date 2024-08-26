@@ -1,6 +1,9 @@
 import os
 from asyncio.log import logger
 from datetime import datetime
+
+from starlette.responses import FileResponse
+
 from app.database.models import PartNumber, ImageData
 from fastapi import APIRouter, HTTPException
 from pony.orm import db_session, select, desc
@@ -62,28 +65,28 @@ def update_database(directory: str):
     print("Database update completed.")
 
 
-@router.get("/image/{part_number}", response_model=ImageResponse)
-@db_session
-def get_image(part_number: str):
-    print(f"Searching for part number: {part_number}")
-    part = PartNumber.get(part_number=part_number)
-
-    if not part:
-        print(f"Part number not found: {part_number}")
-        raise HTTPException(status_code=404, detail="Part number not found")
-
-    print(f"Found part number: {part_number}")
-
-    # Retrieve the latest image associated with this part number
-    image = select(img for img in ImageData if img.pid == part).order_by(desc(ImageData.timestamp)).first()
-
-    if image:
-        print(f"Found image for part number: {part_number}")
-        return ImageResponse(part_number=part.part_number, file_path=image.file_path,
-                             production_line=image.production_line, timestamp=image.timestamp)
-
-    print(f"Image not found for part number: {part_number}")
-    raise HTTPException(status_code=404, detail="Image not found")
+# @router.get("/image/{part_number}", response_model=ImageResponse)
+# @db_session
+# def get_image(part_number: str):
+#     print(f"Searching for part number: {part_number}")
+#     part = PartNumber.get(part_number=part_number)
+#
+#     if not part:
+#         print(f"Part number not found: {part_number}")
+#         raise HTTPException(status_code=404, detail="Part number not found")
+#
+#     print(f"Found part number: {part_number}")
+#
+#     # Retrieve the latest image associated with this part number
+#     image = select(img for img in ImageData if img.pid == part).order_by(desc(ImageData.timestamp)).first()
+#
+#     if image:
+#         print(f"Found image for part number: {part_number}")
+#         return ImageResponse(part_number=part.part_number, file_path=image.file_path,
+#                              production_line=image.production_line, timestamp=image.timestamp)
+#
+#     print(f"Image not found for part number: {part_number}")
+#     raise HTTPException(status_code=404, detail="Image not found")
 
 
 @router.post("/update_database")
@@ -108,3 +111,45 @@ def get_all_partnumbers():
     return [{"id": p.id, "part_number": p.part_number} for p in part_numbers]
 
 
+@router.get("/elnewimage/{part_number}")
+@db_session
+def get_image(part_number: str):
+    print(f"Searching for part number: {part_number}")
+    part = PartNumber.get(part_number=part_number)
+
+    if not part:
+        print(f"Part number not found: {part_number}")
+        raise HTTPException(status_code=404, detail="Part number not found")
+
+    print(f"Found part number: {part_number}")
+
+    # Retrieve the latest image associated with this part number
+    image = select(img for img in ImageData if img.pid == part).order_by(desc(ImageData.timestamp)).first()
+
+    if image:
+        print(f"Found image for part number: {part_number}")
+        if os.path.exists(image.file_path):
+            return FileResponse(image.file_path)
+        else:
+            raise HTTPException(status_code=404, detail="Image file not found")
+
+    print(f"Image not found for part number: {part_number}")
+    raise HTTPException(status_code=404, detail="Image not found")
+
+@router.get("/elnewimage_info/{part_number}", response_model=ImageResponse)
+@db_session
+def get_image_info(part_number: str):
+    print(f"Searching for part number info: {part_number}")
+    part = PartNumber.get(part_number=part_number)
+
+    if not part:
+        print(f"Part number not found: {part_number}")
+        raise HTTPException(status_code=404, detail="Part number not found")
+
+    image = select(img for img in ImageData if img.pid == part).order_by(desc(ImageData.timestamp)).first()
+
+    if image:
+        return ImageResponse(part_number=part.part_number, file_path=image.file_path,
+                             production_line=image.production_line, timestamp=image.timestamp)
+
+    raise HTTPException(status_code=404, detail="Image not found")
